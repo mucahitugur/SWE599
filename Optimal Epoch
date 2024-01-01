@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+
+
+file_path = '/content/data.csv'  # Replace with the path to your data file
+try:
+    data_sample = pd.read_csv(file_path, encoding='utf-8')
+except UnicodeDecodeError:
+    data_sample = pd.read_csv(file_path, encoding='ISO-8859-1')
+
+
+data_sample['InvoiceDate'] = pd.to_datetime(data_sample['InvoiceDate'])
+current_date = data_sample['InvoiceDate'].max() + pd.to_timedelta(1, unit='d')
+
+
+data_sample['TotalPrice'] = data_sample['Quantity'] * data_sample['UnitPrice']
+
+
+customer_data = data_sample.groupby('CustomerID').agg({
+    'InvoiceDate': lambda x: (current_date - x.max()).days,  # Recency
+    'InvoiceNo': 'nunique',   # Frequency
+    'TotalPrice': 'sum'       # Monetary value
+})
+
+
+customer_data.rename(columns={
+    'InvoiceDate': 'Recency',
+    'InvoiceNo': 'Frequency',
+    'TotalPrice': 'MonetaryValue'
+}, inplace=True)
+
+
+scaler = StandardScaler()
+scaled_customer_data = scaler.fit_transform(customer_data)
+
+
+input_dim = scaled_customer_data.shape[1]
+
+autoencoder = models.Sequential([
+    layers.Input(shape=(input_dim,)),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(32, activation='relu', name="encoded"),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(input_dim, activation='linear')
+])
+
+autoencoder.compile(optimizer='adam', loss='mean_squared_error')
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_val = train_test_split(scaled_customer_data, test_size=0.2, random_state=42)
+
+
+train_loss = []
+val_loss = []
+
+
+epochs_range = range(1, 101)  # Adjust the range as needed
+for epoch in epochs_range:
+    history = autoencoder.fit(X_train, X_train, epochs=1, batch_size=32, shuffle=True, validation_data=(X_val, X_val), verbose=0)
+    train_loss.append(history.history['loss'][0])
+    val_loss.append(history.history['val_loss'][0])
+
+
+plt.figure(figsize=(10, 5))
+plt.plot(epochs_range, train_loss, label='Training Loss')
+plt.plot(epochs_range, val_loss, label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Training and Validation Loss Over Epochs')
+plt.grid(True)
+
+optimal_epoch = np.argmin(val_loss) + 1  # Plus 1 to account for 0-based indexing
+
+print(f'Optimal Epoch: {optimal_epoch}')
+
+plt.show()
