@@ -6,7 +6,7 @@ from tensorflow.keras import layers, models
 import matplotlib.pyplot as plt
 
 
-file_path = '/content/data.csv'  # Replace with the path to your data file
+file_path = '/content/data.csv'  
 try:
     data_sample = pd.read_csv(file_path, encoding='utf-8')
 except UnicodeDecodeError:
