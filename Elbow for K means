@@ -1,0 +1,18 @@
+import matplotlib.pyplot as plt
+
+# WCSS values from your K-Means clustering
+wcss_ml = []
+for i in range(1, 11):
+    kmeans = KMeans(n_clusters=i, init='k-means++', max_iter=300, n_init=10, random_state=0)
+    kmeans.fit(scaled_customer_data)
+    wcss_ml.append(kmeans.inertia_)
+
+# Plotting the Elbow Method graph for K-Means
+plt.figure(figsize=(10, 5))
+plt.plot(range(1, 11), wcss_ml, marker='o', linestyle='--')
+plt.title('Elbow Method for K-Means Clustering')
+plt.xlabel('Number of clusters')
+plt.ylabel('WCSS')
+plt.xticks(range(1, 11))
+plt.grid(True)
+plt.show()
